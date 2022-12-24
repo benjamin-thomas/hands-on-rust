@@ -14,7 +14,7 @@ impl Utils {
 const SCREEN_WIDTH: i32 = 80;
 const SCREEN_HEIGHT: i32 = 50;
 
-const FRAME_DURATION: f32 = 75.0;
+const FRAME_DURATION: f32 = 30.0;
 
 enum GameMode {
     Menu,
@@ -48,8 +48,8 @@ impl Obstacle {
 
     fn is_hit(&self, player: &Player) -> bool {
         let does_x_match = player.x == self.x;
-        let player_above_gap = player.y < self.gap_top();
-        let player_below_gap = player.y > self.gap_bottom();
+        let player_above_gap = (player.y as i32) < self.gap_top();
+        let player_below_gap = (player.y as i32) > self.gap_bottom();
         does_x_match && (player_above_gap || player_below_gap)
     }
 
@@ -70,12 +70,12 @@ impl Obstacle {
 
 struct Player {
     x: i32,
-    y: i32,
+    y: f32,
     velocity: f32,
 }
 
 impl Player {
-    fn new(x: i32, y: i32) -> Self {
+    fn new(x: i32, y: f32) -> Self {
         Player {
             x,
             y,
@@ -88,11 +88,11 @@ impl Player {
             self.velocity += 0.2
         };
 
-        self.y += self.velocity as i32; // always rounds down
+        self.y += self.velocity;
         self.x += 1;
 
-        if self.y < 0 {
-            self.y = 0
+        if self.y < 0.0 {
+            self.y = 0.0
         }
     }
 
@@ -101,7 +101,7 @@ impl Player {
     }
 
     fn render(&mut self, ctx: &mut BTerm) {
-        ctx.set(0, self.y, YELLOW, BLACK, to_cp437('@'));
+        ctx.set(0, self.y as i32, YELLOW, BLACK, to_cp437('@'));
     }
 }
 
@@ -126,7 +126,7 @@ impl State {
 
     fn init(mode: GameMode) -> Self {
         Self {
-            player: Player::new(5, 25),
+            player: Player::new(5, 25.0),
             obstacle: Obstacle::new(SCREEN_WIDTH, 0),
             frame_time: 0.0,
             score: 0,
@@ -187,7 +187,7 @@ impl State {
             self.obstacle = Obstacle::new(self.player.x + SCREEN_WIDTH, self.score)
         }
 
-        if self.player.y > SCREEN_HEIGHT || self.obstacle.is_hit(&self.player) {
+        if self.player.y as i32 > SCREEN_HEIGHT || self.obstacle.is_hit(&self.player) {
             self.mode = GameMode::GameOver;
         }
     }
