@@ -15,6 +15,7 @@ const SCREEN_WIDTH: i32 = 80;
 const SCREEN_HEIGHT: i32 = 50;
 
 const FRAME_DURATION: f32 = 30.0;
+const DRAGON_FRAMES : [u16; 6] = [ 64, 1, 2, 3, 2, 1 ];
 
 enum GameMode {
     Menu,
@@ -54,17 +55,31 @@ impl Obstacle {
     }
 
     fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
+        ctx.set_active_console(1);
         let screen_x = self.x - player_x;
+
+        let mut set_point = |y: i32| ctx.set_fancy(
+            PointF::new(screen_x as f32, y as f32),
+            1,
+            Degrees::new(0.0),
+            PointF::new(1.0, 1.0),
+            RED,
+            WHITE,
+            4,
+        );
 
         // Draw the top half of the obstacle
         for y in 0..self.gap_top() {
-            ctx.set(screen_x, y, RED, BLACK, to_cp437('|'))
+            // ctx.set(screen_x, y, RED, BLACK, to_cp437('|'))
+            set_point(y);
         }
 
         // Draw the bottom half of the obstacle
         for y in self.gap_bottom()..SCREEN_HEIGHT {
-            ctx.set(screen_x, y, RED, BLACK, to_cp437('|'))
+            // ctx.set(screen_x, y, RED, BLACK, to_cp437('|'))
+           set_point(y);
         }
+        ctx.set_active_console(0);
     }
 }
 
@@ -72,6 +87,7 @@ struct Player {
     x: i32,
     y: f32,
     velocity: f32,
+    frame: usize,
 }
 
 impl Player {
@@ -80,6 +96,7 @@ impl Player {
             x,
             y,
             velocity: 0.0,
+            frame: 0,
         }
     }
 
@@ -89,11 +106,14 @@ impl Player {
         };
 
         self.y += self.velocity;
-        self.x += 1;
 
         if self.y < 0.0 {
             self.y = 0.0
         }
+
+        self.x += 1;
+        self.frame += 1;
+        self.frame = self.frame % 6;
     }
 
     fn flap(&mut self) {
@@ -101,7 +121,20 @@ impl Player {
     }
 
     fn render(&mut self, ctx: &mut BTerm) {
-        ctx.set(0, self.y as i32, YELLOW, BLACK, to_cp437('@'));
+        ctx.set_active_console(1);
+        ctx.cls();
+        // ctx.set(0, self.y as i32, YELLOW, BLACK, to_cp437('@'));
+        ctx.set_fancy(
+            PointF::new(0.0, self.y),
+            1,
+            Degrees::new(0.0),
+            PointF::new(2.0, 2.0),
+            WHITE,
+            NAVY,
+            DRAGON_FRAMES[self.frame],
+        );
+
+        ctx.set_active_console(0);
     }
 }
 
@@ -204,7 +237,17 @@ impl GameState for State {
 }
 
 fn main() -> BError {
-    let window = BTermBuilder::simple80x50()
+    let font_path = "/home/benjamin/code/github.com/benjamin-thomas/hands-on-rust/flappy/assets/img/flappy32.png";
+    let window = BTermBuilder::new()
+        /*
+           $ file assets/img/flappy32.png
+           assets/img/flappy32.png: PNG image data, 512 x 512, 8-bit/color RGB, non-interlaced
+           (32 px) * (16 items) = 512 (512 x 512 image)
+        */
+        .with_font(font_path, 32, 32)
+        .with_tile_dimensions(16, 16)
+        .with_simple_console(SCREEN_WIDTH, SCREEN_HEIGHT, font_path)
+        .with_fancy_console(  SCREEN_WIDTH, SCREEN_HEIGHT, font_path)
         .with_title("Flappy Dragon")
         .build()?;
 
